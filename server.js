@@ -12,30 +12,41 @@ app.get("/", (_, res) => {
 });
 
 app.post("/process", upload.single("image"), (req, res) => {
-  const input = req.file.path;
-  const output = "/tmp/out.png";
-
-  execFile("/app/process.sh", [input, output], (error) => {
-    if (error) {
-      console.error("❌ Processing failed:", error);
-      return res.status(500).send("Processing failed");
+  try {
+    if (!req.file) {
+      console.error("❌ No file received");
+      return res.status(400).send("No file received");
     }
 
-    fs.readFile(output, (err, data) => {
-      if (err) {
-        console.error("❌ Read failed:", err);
-        return res.status(500).send("Read failed");
+    const inputFile = req.file.path;
+    const outputFile = "/tmp/out.png";
+
+    console.log("✅ Received file at:", inputFile);
+
+    execFile("/app/process.sh", [inputFile, outputFile], (error) => {
+      if (error) {
+        console.error("❌ Processing failed:", error);
+        return res.status(500).send("Processing failed");
       }
 
-      res.set("Content-Type", "image/png");
-      res.send(data);
+      fs.readFile(outputFile, (err, data) => {
+        if (err) {
+          console.error("❌ Read failed:", err);
+          return res.status(500).send("Read failed");
+        }
 
-      fs.unlinkSync(input);
-      fs.unlinkSync(output);
+        res.set("Content-Type", "image/png");
+        res.send(data);
+
+        fs.unlinkSync(inputFile);
+        fs.unlinkSync(outputFile);
+      });
     });
-  });
+
+  } catch (e) {
+    console.error("❌ Unexpected:", e);
+    return res.status(500).send("Unexpected server error");
+  }
 });
 
-app.listen(PORT, () =>
-  console.log(`✅ Server running on port ${PORT}`)
-);
+app.listen(PORT, () => console.log("Server running on port " + PORT));
