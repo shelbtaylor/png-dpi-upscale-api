@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM public.ecr.aws/ubuntu/ubuntu:22.04
 
 # Install dependencies: ImageMagick + tools
 RUN apt-get update && \
