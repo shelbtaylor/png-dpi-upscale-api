@@ -1,20 +1,25 @@
-FROM public.ecr.aws/ubuntu/ubuntu:22.04
+FROM ubuntu:22.04
 
-# Install dependencies: ImageMagick + tools
-RUN apt-get update && \
-    apt-get install -y imagemagick curl wget unzip && \
-    rm -rf /var/lib/apt/lists/*
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    imagemagick \
+    nodejs \
+    npm \
+    && apt-get clean
 
-# Install waifu2x-ncnn-vulkan
-RUN wget https://github.com/nihui/waifu2x-ncnn-vulkan/releases/download/20220728/waifu2x-ncnn-vulkan-20220728-ubuntu.zip && \
-    unzip waifu2x-ncnn-vulkan-20220728-ubuntu.zip && \
-    mv waifu2x-ncnn-vulkan-20220728-ubuntu /waifu && \
-    rm waifu2x-ncnn-vulkan-20220728-ubuntu.zip
-
+# Make app directory
 WORKDIR /app
 
-# Copy your script into container
-COPY process.sh /app/process.sh
+# Copy files
+COPY package*.json ./
+RUN npm install
+COPY . .
+
+# Make process.sh executable
 RUN chmod +x /app/process.sh
 
-CMD ["/app/process.sh"]
+# Expose port
+EXPOSE 3000
+
+# Start only the Node server
+CMD ["node", "server.js"]
