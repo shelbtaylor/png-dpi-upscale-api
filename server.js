@@ -5,17 +5,13 @@ const fs = require("fs");
 
 const app = express();
 const upload = multer({ dest: "/tmp" });
+const PORT = process.env.PORT || 3000;
 
-// ✅ HEALTH CHECK
-app.get("/", (req, res) => {
-  res.send("PNG Upscale + 300 DPI API ✅ Running");
+app.get("/", (_, res) => {
+  res.send("✅ PNG DPI + (optional) Upscale API Running");
 });
 
 app.post("/process", upload.single("image"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).send("No file uploaded");
-  }
-
   const input = req.file.path;
   const output = "/tmp/out.png";
 
@@ -27,22 +23,19 @@ app.post("/process", upload.single("image"), (req, res) => {
 
     fs.readFile(output, (err, data) => {
       if (err) {
-        console.error("❌ Could not read output:", err);
+        console.error("❌ Read failed:", err);
         return res.status(500).send("Read failed");
       }
 
       res.set("Content-Type", "image/png");
       res.send(data);
 
-      // cleanup
-      fs.unlink(input, () => {});
-      fs.unlink(output, () => {});
+      fs.unlinkSync(input);
+      fs.unlinkSync(output);
     });
   });
 });
 
-// ✅ Required for Railway
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () =>
+  console.log(`✅ Server running on port ${PORT}`)
+);
