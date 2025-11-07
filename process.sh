@@ -1,37 +1,35 @@
 #!/bin/bash
 set -e
 
-INPUT="$1"
-OUTPUT="$2"
+INPUT_FILE="$1"
+OUTPUT_FILE="$2"
 
-echo "Starting processing…"
-echo "Input: $INPUT"
-echo "Output: $OUTPUT"
+echo "Starting processing..."
 
-# Temp files
-UPSCALED="temp_upscaled.png"
+# Temp paths
+TMP_DIR="/tmp/process"
+mkdir -p "$TMP_DIR"
 
-##############################################
-# Try UPSCALE X3 only
-##############################################
-echo "Attempting upscale x3…"
-if /waifu/waifu2x-ncnn-vulkan -i "$INPUT" -o "$UPSCALED" -s 3 -n 0; then
-    echo "✅ x3 upscale succeeded"
-else
-    echo "❌ x3 failed — using original file"
-    cp "$INPUT" "$UPSCALED"
-fi
+ORIGINAL="$TMP_DIR/original.png"
+UPSCALED="$TMP_DIR/upscaled.png"
+FINAL="$TMP_DIR/final.png"
 
-##############################################
-# Force PNG + DPI 300
-##############################################
-echo "Setting DPI to 300 + PNG…"
-convert "$UPSCALED" -units PixelsPerInch -density 300 "$OUTPUT"
+cp "$INPUT_FILE" "$ORIGINAL"
 
-##############################################
-# Cleanup
-##############################################
-rm -f "$UPSCALED"
+echo "Attempting upscale x3..."
 
-echo "✅ Done!"
-exit 0
+# CPU upscale using ImageMagick
+magick "$ORIGINAL" -filter Mitchell -resize 300% "$UPSCALED" || {
+    echo "❌ x3 upscale failed — using original"
+    cp "$ORIGINAL" "$UPSCALED"
+}
+
+# Resize longest edge DOWN to 3600px max
+echo "Resizing to max 3600px..."
+magick "$UPSCALED" -resize 3600x3600\> "$FINAL"
+
+# Add DPI
+echo "Setting DPI to 300..."
+magick "$FINAL" -units PixelsPerInch -density 300 "$OUTPUT_FILE"
+
+echo "✅ Done."
